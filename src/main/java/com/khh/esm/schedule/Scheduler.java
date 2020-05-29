@@ -58,7 +58,7 @@ public class Scheduler {
 //	@Scheduled(cron = "*/10 * * * * *")
 //  @Scheduled(cron = "10 10 1 * * 1")
     @Async
-    @Scheduled(cron = "*/5 * * * * *")
+    @Scheduled(cron = "*/5* * * * *")
     public void monitor() throws Throwable {
         log.debug("-==");
 
@@ -74,7 +74,7 @@ public class Scheduler {
         searchSourceBuilder.sort(new FieldSortBuilder("@timestamp").order(SortOrder.DESC));
 //        searchSourceBuilder.query(QueryBuilders.termQuery("log_level", "ERROR"));
         searchSourceBuilder.query(QueryBuilders.matchQuery("log_level", "ERROR"));
-        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("now-5s").lt("now"));
+        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("now-6s").lt("now"));
 //        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("now-145m").lt("now"));
 //        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("now-60m").lt("now").timeZone("Asia/Seoul"));
 //        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("now/d").lt("now").timeZone("Asia/Seoul"));
