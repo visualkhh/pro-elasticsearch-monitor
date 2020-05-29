@@ -1,0 +1,49 @@
+plugins {
+	id 'org.springframework.boot' version '2.3.0.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+	id 'java'
+}
+
+group = 'com.khh'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+//	compile 'org.springframework.boot:spring-boot-starter-mail'
+//	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+//	compile group: 'org.elasticsearch.client', name: 'transport', version: '7.7.0'
+//	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+//	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+//		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+//	}
+//	implementation 'com.google.code.gson:gson:2.8.6'
+
+	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+
+//	compile "org.springframework:spring-context-support"
+	compile group: 'com.sun.mail', name: 'javax.mail', version: '1.6.2'
+
+	testImplementation 'io.projectreactor:reactor-test'
+	compile 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+	testCompileOnly 'org.projectlombok:lombok'
+	compile group: 'com.google.guava', name: 'guava', version: '28.0-jre'
+}
+
+test {
+	useJUnitPlatform()
+}
+bootJar {
+//	archiveFileName = "${archiveBaseName.get()}.${archiveExtension.get()}"
+	archiveFileName = "monitor.${archiveExtension.get()}"
+}
