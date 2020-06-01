@@ -7,8 +7,8 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +26,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Component
@@ -58,12 +56,18 @@ public class Scheduler {
 //	@Scheduled(cron = "*/10 * * * * *")
 //  @Scheduled(cron = "10 10 1 * * 1")
     Date last = new Date();
-//    @Async
+
+    //    @Async
     @Scheduled(cron = "*/5 * * * * *")
     public void monitor() throws Throwable {
         log.debug("-==");
 
-    //http://119.206.205.181:9200/mindcare_*care/_search?q=log_level:ERROR&sort=@timestamp:desc&pretty=true
+
+//        BufferedImage capturedImage = ghostDriver.getScreenshotAsBufferedImage("http://119.206.205.181:5601/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-60m,to:now))&_a=(columns:!(_source),filters:!(),index:b73a3e60-a173-11ea-8461-dd4573115998,interval:auto,query:(language:kuery,query:''),sort:!())");
+//        BufferedImage capturedImage = ghostDriver.getScreenshotAsBufferedImage("http://119.206.205.181:5601/app/kibana#/discover?_g%3D(filters%3A!()%2CrefreshInterval%3A(pause%3A!t%2Cvalue%3A0)%2Ctime%3A(from%3Anow-60m%2Cto%3Anow))%26_a%3D(columns%3A!(_source)%2Cfilters%3A!()%2Cindex%3Ab73a3e60-a173-11ea-8461-dd4573115998%2Cinterval%3Aauto%2Cquery%3A(language%3Akuery%2Cquery%3A'')%2Csort%3A!())");
+//        BufferedImage capturedImage = ghostDriver.getScreenshotAsBufferedImage("http://google.com");
+//        ImageIO.write(capturedImage, "png", new File("kakao.png"));
+        //http://119.206.205.181:9200/mindcare_*care/_searÒch?q=log_level:ERROR&sort=@timestamp:desc&pretty=true
 
 //        SearchRequest searchRequest = new SearchRequest("mindcare_*care");
         SearchRequest searchRequest = new SearchRequest("mindcare*");
@@ -110,7 +114,6 @@ public class Scheduler {
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
 
-
         for (int i = 0; i < searchHits.length; i++) {
             SearchHit hit = searchHits[i];
             String index = hit.getIndex();
@@ -124,8 +127,7 @@ public class Scheduler {
             care.set_type(hit.getType());
 
 
-
-            if(last.getTime() < care.getTimestamp().getTime()) {
+            if (last.getTime() < care.getTimestamp().getTime()) {
                 datas.add(care);
             }
 //            Map<String, Object> sourceAsMap = hit.getSourceAsMap();
@@ -133,7 +135,6 @@ public class Scheduler {
 //            List<Object> users = (List<Object>) sourceAsMap.get("user");
 //            Map<String, Object> innerObject = (Map<String, Object>) sourceAsMap.get("innerObject");
         }
-
 
 
         datas.forEach(it -> {
@@ -144,7 +145,7 @@ public class Scheduler {
 //        datas = datas.stream().filter(it->!it.getStacktrace().contains("java.io.IOException: Broken pipe")).collect(Collectors.toList());
         datas = datas.stream().filter(it -> null == it.getException_class() || !it.getException_class().contains("org.apache.catalina.connector.ClientAbortException")).collect(Collectors.toList());
 
-        if(datas.size()>0) {
+        if (datas.size() > 0) {
             last = datas.get(0).getTimestamp();
         }
         log.info("==========>{}", datas);
@@ -154,7 +155,7 @@ public class Scheduler {
 //            message.setTo("khh@omnicns.com");
 //            message.setSubject("gg");
 //            message.setText("czczczc" + datas.size());
-            helper.setTo(new String[]{"serviceteam@omnicns.com","hirakian@omnicns.com"});
+            helper.setTo(new String[]{"serviceteam@omnicns.com", "hirakian@omnicns.com"});
 //            helper.setTo(new String[]{"khh@omnicns.com"});
 
             String title = String.format("%s %s", new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()), "mindcare 5초간격 ERROR 발생 (" + datas.size() + "건)");
@@ -166,7 +167,7 @@ public class Scheduler {
             String th = "border:1px solid black; boarder-spacing: 0px 0px; border-collapse: collapse; background-color:#c3c3c3; padding:15px;";
             String td = "border:1px solid black; boarder-spacing: 0px 0px; border-collapse: collapse; padding:15px;text-align: center;";
 //            content.append(String.format("%s %s<br/>", new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()), title));
-            content.append(title+"<br/>");
+            content.append(title + "<br/>");
             content.append("자세한 내용은 아래 상세 내역을 참고해주세요.<br/><br/><br/>");
             //content.append(String.format("* 참여기간: %s ~ %s <br/>", ptcpStDt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd")), ptcpEndDt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))));
             content.append("* 상세 내역<br/>");
@@ -195,9 +196,9 @@ public class Scheduler {
 
                 content.append(String.format("<td style='%s'>", td) + data.getHost() + "</td>");
                 // 시스템
-                content.append(String.format("<td style='%s'>", td) + (null==data.getService_name()?data.get_index():data.getService_name())  + "</td>");
+                content.append(String.format("<td style='%s'>", td) + (null == data.getService_name() ? data.get_index() : data.getService_name()) + "</td>");
                 // 타입
-                content.append(String.format("<td style='%s'>", td) + (null==data.getService_type()?data.get_type():data.getService_type()) + "</td>");
+                content.append(String.format("<td style='%s'>", td) + (null == data.getService_type() ? data.get_type() : data.getService_type()) + "</td>");
                 // 메시지
                 content.append(String.format("<td style='%s'>", td) + data.getMsg() + "</td>");
                 // url_path
@@ -214,6 +215,7 @@ public class Scheduler {
             content.append("<br/>");
 
             helper.setText(content.toString(), true);
+//            helper.addA
             javaMailSender.send(message);
         }
 //        SimpleMailMessage message = new SimpleMailMessage();

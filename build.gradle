@@ -38,6 +38,19 @@ dependencies {
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	testCompileOnly 'org.projectlombok:lombok'
 	compile group: 'com.google.guava', name: 'guava', version: '28.0-jre'
+//	compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '3.141.59'
+//	compile group: 'org.seleniumhq.selenium', name: 'selenium-api', version: '3.141.59'
+//	compile group: 'org.seleniumhq.selenium', name: 'selenium-remote-driver', version: '3.141.59'
+//	compile group: 'org.seleniumhq.selenium', name: 'selenium-remote-driver', version: '2.47.1'
+//	compile group: 'org.seleniumhq.selenium', name: 'selenium-remote-driver', version: '3.9.1'
+
+
+
+
+	// https://mvnrepository.com/artifact/com.codeborne/phantomjsdriver
+//	compile group: 'com.codeborne', name: 'phantomjsdriver', version: '1.4.1'
+
+
 }
 
 test {
