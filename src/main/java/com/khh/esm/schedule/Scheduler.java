@@ -8,7 +8,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -57,24 +57,43 @@ public class Scheduler {
 //	@Scheduled(cron = "1 * * * * *")
 //	@Scheduled(cron = "*/10 * * * * *")
 //  @Scheduled(cron = "10 10 1 * * 1")
-    @Async
-    @Scheduled(cron = "*/5* * * * *")
+    Date last = new Date();
+//    @Async
+    @Scheduled(cron = "*/5 * * * * *")
     public void monitor() throws Throwable {
         log.debug("-==");
 
-//http://119.206.205.181:9200/mindcare_*care/_search?q=log_level:ERROR&sort=@timestamp:desc&pretty=true
+    //http://119.206.205.181:9200/mindcare_*care/_search?q=log_level:ERROR&sort=@timestamp:desc&pretty=true
 
 //        SearchRequest searchRequest = new SearchRequest("mindcare_*care");
         SearchRequest searchRequest = new SearchRequest("mindcare*");
 //        searchRequest.indicesOptions(IndicesOptions.lenientExpandOpen());
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.from(0);
-        searchSourceBuilder.size(500);
-        searchSourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
+        searchSourceBuilder.size(100);
+//        searchSourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
         searchSourceBuilder.sort(new FieldSortBuilder("@timestamp").order(SortOrder.DESC));
 //        searchSourceBuilder.query(QueryBuilders.termQuery("log_level", "ERROR"));
-        searchSourceBuilder.query(QueryBuilders.matchQuery("log_level", "ERROR"));
-        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("now-6s").lt("now"));
+
+
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        BoolQueryBuilder shouldQueryBuilder = QueryBuilders.boolQuery().should(QueryBuilders.matchQuery("log_level", "ERROR"));
+//        boolQueryBuilder.filter(shouldQueryBuilder).filter(QueryBuilders.rangeQuery("@timestamp").gte("now-6s").lt("now"));
+//        boolQueryBuilder.filter(shouldQueryBuilder).filter(QueryBuilders.rangeQuery("@timestamp").gte("now-60m").lt("now").timeZone("Asia/Seoul"));
+//        https://stackoverflow.com/questions/20238280/date-in-to-utc-format-java
+        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+//        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));   // This line converts the given date into UTC time zone
+//        final java.util.Date dateObj = sdf.parse("2013-10-22T01:37:56");
+//        boolQueryBuilder.filter(shouldQueryBuilder).filter(QueryBuilders.rangeQuery("@timestamp").gte(sdf.format(last)).timeZone("Asia/Seoul"));
+        boolQueryBuilder.filter(shouldQueryBuilder).filter(QueryBuilders.rangeQuery("@timestamp").gt(sdf.format(last)).timeZone("Asia/Seoul"));
+
+        searchSourceBuilder.query(boolQueryBuilder);
+//        QueryBuilders.boolQuery().filter(matchQueryBuilder)
+//        MatchQueryBuilder matchQueryBuilder = QueryBuilders.matchQuery("log_level", "ERROR");
+//        matchQueryBuilder.
+//        searchSourceBuilder.query(matchQueryBuilder);
+//        searchSourceBuilder.query(QueryBuilders.matchQuery("_id", "UOwFZHIBrXAsAi7m_V_T"));
+//        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("now-6s").lt("now"));
 //        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("now-145m").lt("now"));
 //        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("now-60m").lt("now").timeZone("Asia/Seoul"));
 //        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("now/d").lt("now").timeZone("Asia/Seoul"));
@@ -82,8 +101,6 @@ public class Scheduler {
 //        searchSourceBuilder.query(QueryBuilders.rangeQuery("date").gte("2020-05-29T00:00:00").lt("now").timeZone("Asia/Seoul"));
 //        searchSourceBuilder.query(QueryBuilders.rangeQuery("@timestamp").gte("2020-05-28T15:00:00.000Z").lt("2020-05-29T14:59:59.999Z"));//.timeZone("Asia/Seoul"));
         searchRequest.source(searchSourceBuilder);
-
-
         SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
         SearchHits hits = searchResponse.getHits();
         SearchHit[] searchHits = hits.getHits();
@@ -91,7 +108,11 @@ public class Scheduler {
         ObjectMapper objectMapper = new ObjectMapper();
         MimeMessage message = javaMailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        for (SearchHit hit : searchHits) {
+
+
+
+        for (int i = 0; i < searchHits.length; i++) {
+            SearchHit hit = searchHits[i];
             String index = hit.getIndex();
             String id = hit.getId();
             float score = hit.getScore();
@@ -102,22 +123,30 @@ public class Scheduler {
             care.set_index(hit.getIndex());
             care.set_type(hit.getType());
 
-            datas.add(care);
+
+
+            if(last.getTime() < care.getTimestamp().getTime()) {
+                datas.add(care);
+            }
 //            Map<String, Object> sourceAsMap = hit.getSourceAsMap();
 //            String documentTitle = (String) sourceAsMap.get("title");
 //            List<Object> users = (List<Object>) sourceAsMap.get("user");
 //            Map<String, Object> innerObject = (Map<String, Object>) sourceAsMap.get("innerObject");
         }
 
+
+
         datas.forEach(it -> {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-
             log.debug(it.get_id() + "{} {}-> {}", format.format(it.getTimestamp()), it.getException_class(), it);
         });
 
 //        datas = datas.stream().filter(it->!it.getStacktrace().contains("java.io.IOException: Broken pipe")).collect(Collectors.toList());
         datas = datas.stream().filter(it -> null == it.getException_class() || !it.getException_class().contains("org.apache.catalina.connector.ClientAbortException")).collect(Collectors.toList());
 
+        if(datas.size()>0) {
+            last = datas.get(0).getTimestamp();
+        }
         log.info("==========>{}", datas);
 
         if (datas.size() > 0) {
@@ -147,6 +176,7 @@ public class Scheduler {
             content.append("   <thead>");
             content.append("       <tr>");
             content.append(String.format("<th style='%s'>발생시간</th>", th));
+            content.append(String.format("<th style='%s'>host</th>", th));
             content.append(String.format("<th style='%s'>시스템</th>", th));
             content.append(String.format("<th style='%s'>타입</th>", th));
             content.append(String.format("<th style='%s'>메시지</th>", th));
@@ -162,6 +192,8 @@ public class Scheduler {
                 content.append("       <tr>");
                 // 발생시간
                 content.append(String.format("<td style='%s'>", td) + data.getDate() + "</td>");
+
+                content.append(String.format("<td style='%s'>", td) + data.getHost() + "</td>");
                 // 시스템
                 content.append(String.format("<td style='%s'>", td) + (null==data.getService_name()?data.get_index():data.getService_name())  + "</td>");
                 // 타입
