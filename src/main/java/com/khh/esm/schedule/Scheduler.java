@@ -143,10 +143,16 @@ public class Scheduler {
         });
 
 //        datas = datas.stream().filter(it->!it.getStacktrace().contains("java.io.IOException: Broken pipe")).collect(Collectors.toList());
-        datas = datas.stream().filter(it -> null == it.getException_class()
-                || !it.getException_class().contains("org.apache.catalina.connector.ClientAbortException")
-                || !it.getException_class().contains("org.springframework.security.access.AccessDeniedException")
-        ).collect(Collectors.toList());
+        datas = datas.stream()
+                .filter(it -> null == it.getException_class()
+                        || !it.getException_class().contains("org.apache.catalina.connector.ClientAbortException")
+                        || !it.getException_class().contains("org.springframework.security.access.AccessDeniedException")
+                )
+                .filter(it -> null == it.getCode()
+                        || !it.getCode().contains("M2007") //PW가 일치하지 않을 때
+                        || !it.getCode().contains("M2006") //존재하지 않는 아이디
+                )
+                .collect(Collectors.toList());
 
         if (datas.size() > 0) {
             last = datas.get(0).getTimestamp();
@@ -184,6 +190,7 @@ public class Scheduler {
             content.append(String.format("<th style='%s'>시스템</th>", th));
             content.append(String.format("<th style='%s'>타입</th>", th));
             content.append(String.format("<th style='%s'>메시지</th>", th));
+            content.append(String.format("<th style='%s'>코드</th>", th));
             content.append(String.format("<th style='%s'>url_path</th>", th));
             content.append(String.format("<th style='%s'>exception_class</th>", th));
             content.append(String.format("<th style='%s'>full message</th>", th));
@@ -204,6 +211,8 @@ public class Scheduler {
                 content.append(String.format("<td style='%s'>", td) + (null == data.getService_type() ? data.get_type() : data.getService_type()) + "</td>");
                 // 메시지
                 content.append(String.format("<td style='%s'>", td) + data.getMsg() + "</td>");
+                // code
+                content.append(String.format("<td style='%s'>", td) + data.getCode() + "</td>");
                 // url_path
                 content.append(String.format("<td style='%s'>", td) + data.getUrl_path() + "</td>");
                 // exception_class
