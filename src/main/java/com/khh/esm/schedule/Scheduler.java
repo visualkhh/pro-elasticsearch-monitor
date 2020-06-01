@@ -143,7 +143,10 @@ public class Scheduler {
         });
 
 //        datas = datas.stream().filter(it->!it.getStacktrace().contains("java.io.IOException: Broken pipe")).collect(Collectors.toList());
-        datas = datas.stream().filter(it -> null == it.getException_class() || !it.getException_class().contains("org.apache.catalina.connector.ClientAbortException")).collect(Collectors.toList());
+        datas = datas.stream().filter(it -> null == it.getException_class()
+                || !it.getException_class().contains("org.apache.catalina.connector.ClientAbortException")
+                || !it.getException_class().contains("org.springframework.security.access.AccessDeniedException")
+        ).collect(Collectors.toList());
 
         if (datas.size() > 0) {
             last = datas.get(0).getTimestamp();
