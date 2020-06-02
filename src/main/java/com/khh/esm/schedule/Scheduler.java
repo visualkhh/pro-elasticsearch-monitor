@@ -144,14 +144,13 @@ public class Scheduler {
 
 //        datas = datas.stream().filter(it->!it.getStacktrace().contains("java.io.IOException: Broken pipe")).collect(Collectors.toList());
         datas = datas.stream()
-                .filter(it -> null == it.getException_class()
-                        || (!it.getException_class().contains("org.apache.catalina.connector.ClientAbortException") || !it.getException_class().contains("org.springframework.security.access.AccessDeniedException"))
-                )
+                .filter(it -> !"org.apache.catalina.connector.ClientAbortException".equals(it.getException_class()))
+                .filter(it-> !"org.springframework.security.access.AccessDeniedException".equals((it.getException_class())))
+
                 //PW가 일치하지 않을 때
                 //존재하지 않는 아이디
-                .filter(it -> null == it.getCode()
-                        || (!it.getCode().contains("M2007") || !it.getCode().contains("M2006"))
-                )
+                .filter(it -> !"M2007".equals(it.getCode()))
+                .filter(it -> !"M2006".equals(it.getCode()))
                 .collect(Collectors.toList());
 
         if (datas.size() > 0) {
