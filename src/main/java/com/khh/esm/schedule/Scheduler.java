@@ -20,6 +20,9 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring5.SpringTemplateEngine;
 
 import javax.mail.internet.MimeMessage;
 import java.text.SimpleDateFormat;
@@ -42,7 +45,10 @@ public class Scheduler {
     @Qualifier("elasticsearchClient")
     @Autowired
     RestHighLevelClient restHighLevelClient;
+//    SpringTemplateEngine
 
+    @Autowired
+    private TemplateEngine templateEngine;
     //    JavaM
     //	https://postitforhooney.tistory.com/entry/SpringScheduled-Cron-Example-%ED%91%9C%ED%98%84%EC%8B%9D
 //
@@ -55,6 +61,18 @@ public class Scheduler {
 //	@Scheduled(cron = "1 * * * * *")
 //	@Scheduled(cron = "*/10 * * * * *")
 //  @Scheduled(cron = "10 10 1 * * 1")
+
+
+
+//    @Scheduled(cron = "*/5 * * * * *")
+//    public void gg() throws Throwable {
+//        Context context = new Context();
+//        context.setVariable("message", "ffff");
+//        String i = templateEngine.process("mail-template", context);
+//        log.debug("-=="+i);
+//    }
+
+
     Date last = new Date();
 
     //    @Async
@@ -151,6 +169,8 @@ public class Scheduler {
                 //존재하지 않는 아이디
                 .filter(it -> !"M2007".equals(it.getCode()))
                 .filter(it -> !"M2006".equals(it.getCode()))
+                .filter(it -> !"M2001".equals(it.getCode()))
+                .filter(it -> !"c.k.o.o.s.s.CustomAuthenticationProvider".equals(it.getJava_class()))
                 .collect(Collectors.toList());
 
         if (datas.size() > 0) {
@@ -191,6 +211,7 @@ public class Scheduler {
             content.append(String.format("<th style='%s'>메시지</th>", th));
             content.append(String.format("<th style='%s'>코드</th>", th));
             content.append(String.format("<th style='%s'>url_path</th>", th));
+            content.append(String.format("<th style='%s'>java_class</th>", th));
             content.append(String.format("<th style='%s'>exception_class</th>", th));
             content.append(String.format("<th style='%s'>full message</th>", th));
             content.append("       </tr>");
@@ -214,6 +235,8 @@ public class Scheduler {
                 content.append(String.format("<td style='%s'>", td) + data.getCode() + "</td>");
                 // url_path
                 content.append(String.format("<td style='%s'>", td) + data.getUrl_path() + "</td>");
+                // java_class
+                content.append(String.format("<td style='%s'>", td) + data.getJava_class()  + "</td>");
                 // exception_class
                 content.append(String.format("<td style='%s'>", td) + data.getException_class() + "</td>");
                 // stacktrace

@@ -13,6 +13,7 @@ public class Application {
     public static void main(String[] args) {
         SpringApplicationBuilder builder = new SpringApplicationBuilder(Application.class);
         builder.web(WebApplicationType.NONE).build().addListeners(new ApplicationPidFileWriter());
+//        builder.build().addListeners(new ApplicationPidFileWriter());
         builder.run(args);
 //
 //		SpringApplication.run(Application.class, args);
