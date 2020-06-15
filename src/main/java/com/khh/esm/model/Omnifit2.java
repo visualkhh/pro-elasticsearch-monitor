@@ -10,9 +10,9 @@ import org.springframework.data.elasticsearch.annotations.Document;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-@JsonIgnoreProperties(ignoreUnknown = true)//https://lng1982.tistory.com/180
-@Document(indexName = "mindcare_care")
-public class MindCare extends ElasticSearch{
+@JsonIgnoreProperties(ignoreUnknown = true)
+@Document(indexName = "omnifit2")
+public class Omnifit2 extends ElasticSearch{
     String log_level;
     String url_path;
     String service_name;
@@ -29,7 +29,10 @@ public class MindCare extends ElasticSearch{
     String msg;
     String host;
     String date;
+    String thread;
+    String throwable;
 
     String[] paths;
+    String[] tags;
 
 }

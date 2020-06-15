@@ -2,6 +2,7 @@ package com.khh.esm.schedule;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.khh.esm.model.MindCare;
+import com.khh.esm.model.Omnifit2;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -21,8 +22,6 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
-import org.thymeleaf.context.Context;
-import org.thymeleaf.spring5.SpringTemplateEngine;
 
 import javax.mail.internet.MimeMessage;
 import java.text.SimpleDateFormat;
@@ -73,11 +72,150 @@ public class Scheduler {
 //    }
 
 
-    Date last = new Date();
 
-    //    @Async
+
+
+
+
+    Date omnifit2Last = new Date();
     @Scheduled(cron = "*/5 * * * * *")
-    public void monitor() throws Throwable {
+    public void omnifit2Monitor() throws Throwable {
+        log.debug("-==");
+        SearchRequest searchRequest = new SearchRequest("omnifit2");
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.from(0);
+        searchSourceBuilder.size(100);
+        searchSourceBuilder.sort(new FieldSortBuilder("@timestamp").order(SortOrder.DESC));
+
+
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        BoolQueryBuilder shouldQueryBuilder = QueryBuilders.boolQuery().should(QueryBuilders.matchQuery("log_level", "ERROR"));
+        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        boolQueryBuilder.filter(shouldQueryBuilder).filter(QueryBuilders.rangeQuery("@timestamp").gt(sdf.format(omnifit2Last)).timeZone("Asia/Seoul"));
+
+        searchSourceBuilder.query(boolQueryBuilder);
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+        SearchHits hits = searchResponse.getHits();
+        SearchHit[] searchHits = hits.getHits();
+        List<Omnifit2> datas = new ArrayList<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+        MimeMessage message = javaMailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+
+        for (int i = 0; i < searchHits.length; i++) {
+            SearchHit hit = searchHits[i];
+            String index = hit.getIndex();
+            String id = hit.getId();
+            float score = hit.getScore();
+            String sourceAsString = hit.getSourceAsString();
+            Omnifit2 care = objectMapper.readValue(sourceAsString, Omnifit2.class);
+            care.set_id(id);
+            care.set_index(hit.getIndex());
+            care.set_type(hit.getType());
+
+
+            if (omnifit2Last.getTime() < care.getTimestamp().getTime()) {
+                datas.add(care);
+            }
+        }
+
+
+        datas.forEach(it -> {
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            log.debug(it.get_id() + "{} {}-> {}", format.format(it.getTimestamp()), it.getException_class(), it);
+        });
+
+//        datas = datas.stream().filter(it->!it.getStacktrace().contains("java.io.IOException: Broken pipe")).collect(Collectors.toList());
+//        datas = datas.stream()
+//                .filter(it -> !"org.apache.catalina.connector.ClientAbortException".equals(it.getException_class()))
+//                .filter(it-> !"org.springframework.security.access.AccessDeniedException".equals((it.getException_class())))
+//                .filter(it -> !"M2007".equals(it.getCode()))
+//                .filter(it -> !"M2006".equals(it.getCode()))
+//                .filter(it -> !"c.k.o.o.s.s.CustomAuthenticationProvider".equals(it.getJava_class()))
+//                .collect(Collectors.toList());
+
+        if (datas.size() > 0) {
+            omnifit2Last = datas.get(0).getTimestamp();
+        }
+        log.info("==========>{}", datas);
+
+        if (datas.size() > 0) {
+            helper.setTo(new String[]{"serviceteam@omnicns.com"});
+//            helper.setTo(new String[]{"khh@omnicns.com"});
+
+            String title = String.format("%s %s", new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()), "omnifit2 5초간격 ERROR 발생 (" + datas.size() + "건)");
+            message.setSubject(title);
+
+
+            StringBuffer content = new StringBuffer();
+            String table = "border:1px solid black; boarder-spacing: 0px 0px; border-collapse: collapse;";
+            String th = "border:1px solid black; boarder-spacing: 0px 0px; border-collapse: collapse; background-color:#c3c3c3; padding:15px;";
+            String td = "border:1px solid black; boarder-spacing: 0px 0px; border-collapse: collapse; padding:15px;text-align: center;";
+//            content.append(String.format("%s %s<br/>", new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()), title));
+            content.append(title + "<br/>");
+            content.append("자세한 내용은 아래 상세 내역을 참고해주세요.<br/><br/><br/>");
+            //content.append(String.format("* 참여기간: %s ~ %s <br/>", ptcpStDt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd")), ptcpEndDt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))));
+            content.append("* 상세 내역<br/>");
+
+
+            content.append(String.format("<table style='%s'>", table));
+            content.append("   <thead>");
+            content.append("       <tr>");
+            content.append(String.format("<th style='%s'>발생시간</th>", th));
+            content.append(String.format("<th style='%s'>host</th>", th));
+            content.append(String.format("<th style='%s'>시스템</th>", th));
+            content.append(String.format("<th style='%s'>타입</th>", th));
+            content.append(String.format("<th style='%s'>메시지</th>", th));
+            content.append(String.format("<th style='%s'>코드</th>", th));
+            content.append(String.format("<th style='%s'>url_path</th>", th));
+            content.append(String.format("<th style='%s'>java_class</th>", th));
+            content.append(String.format("<th style='%s'>exception_class</th>", th));
+            content.append(String.format("<th style='%s'>full message</th>", th));
+            content.append("       </tr>");
+            content.append("   </thead>");
+            content.append("   <tbody>");
+
+
+            for (Omnifit2 data : datas) {
+                content.append("       <tr>");
+                // 발생시간
+                content.append(String.format("<td style='%s'>", td) + data.getDate() + "</td>");
+
+                content.append(String.format("<td style='%s'>", td) + data.getHost() + "</td>");
+                // 시스템
+                content.append(String.format("<td style='%s'>", td) + (null == data.getService_name() ? data.get_index() : data.getService_name()) + "</td>");
+                // 타입
+                content.append(String.format("<td style='%s'>", td) + (null == data.getService_type() ? data.get_type() : data.getService_type()) + "</td>");
+                // 메시지
+                content.append(String.format("<td style='%s'>", td) + data.getMsg() + "</td>");
+                // code
+                content.append(String.format("<td style='%s'>", td) + data.getCode() + "</td>");
+                // url_path
+                content.append(String.format("<td style='%s'>", td) + data.getUrl_path() + "</td>");
+                // java_class
+                content.append(String.format("<td style='%s'>", td) + data.getJava_class()  + "</td>");
+                // exception_class
+                content.append(String.format("<td style='%s'>", td) + data.getException_class() + "</td>");
+                // stacktrace
+                content.append(String.format("<td style='%s'><input type='text'  value='" + data.getMessage().replaceAll("\"", "'") + "'>", td));
+                content.append("       </tr>");
+            }
+            content.append("   </tbody>");
+            content.append("</table>");
+            content.append("<br/>");
+            content.append("<br/>");
+
+            helper.setText(content.toString(), true);
+            javaMailSender.send(message);
+        }
+    }
+
+
+    Date mindcareLast = new Date();
+//    @Scheduled(cron = "*/5 * * * * *")
+    public void mindcareMonitor() throws Throwable {
         log.debug("-==");
 
 
@@ -107,7 +245,7 @@ public class Scheduler {
 //        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));   // This line converts the given date into UTC time zone
 //        final java.util.Date dateObj = sdf.parse("2013-10-22T01:37:56");
 //        boolQueryBuilder.filter(shouldQueryBuilder).filter(QueryBuilders.rangeQuery("@timestamp").gte(sdf.format(last)).timeZone("Asia/Seoul"));
-        boolQueryBuilder.filter(shouldQueryBuilder).filter(QueryBuilders.rangeQuery("@timestamp").gt(sdf.format(last)).timeZone("Asia/Seoul"));
+        boolQueryBuilder.filter(shouldQueryBuilder).filter(QueryBuilders.rangeQuery("@timestamp").gt(sdf.format(mindcareLast)).timeZone("Asia/Seoul"));
 
         searchSourceBuilder.query(boolQueryBuilder);
 //        QueryBuilders.boolQuery().filter(matchQueryBuilder)
@@ -145,7 +283,7 @@ public class Scheduler {
             care.set_type(hit.getType());
 
 
-            if (last.getTime() < care.getTimestamp().getTime()) {
+            if (mindcareLast.getTime() < care.getTimestamp().getTime()) {
                 datas.add(care);
             }
 //            Map<String, Object> sourceAsMap = hit.getSourceAsMap();
@@ -169,12 +307,12 @@ public class Scheduler {
                 //존재하지 않는 아이디
                 .filter(it -> !"M2007".equals(it.getCode()))
                 .filter(it -> !"M2006".equals(it.getCode()))
-                .filter(it -> !"M2001".equals(it.getCode()))
+//                .filter(it -> !"M2001".equals(it.getCode()))
                 .filter(it -> !"c.k.o.o.s.s.CustomAuthenticationProvider".equals(it.getJava_class()))
                 .collect(Collectors.toList());
 
         if (datas.size() > 0) {
-            last = datas.get(0).getTimestamp();
+            mindcareLast = datas.get(0).getTimestamp();
         }
         log.info("==========>{}", datas);
 
@@ -183,7 +321,7 @@ public class Scheduler {
 //            message.setTo("khh@omnicns.com");
 //            message.setSubject("gg");
 //            message.setText("czczczc" + datas.size());
-            helper.setTo(new String[]{"serviceteam@omnicns.com", "hirakian@omnicns.com"});
+            helper.setTo(new String[]{"serviceteam@omnicns.com"});
 //            helper.setTo(new String[]{"khh@omnicns.com"});
 
             String title = String.format("%s %s", new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()), "mindcare 5초간격 ERROR 발생 (" + datas.size() + "건)");
