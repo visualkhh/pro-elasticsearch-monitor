@@ -214,7 +214,7 @@ public class Scheduler {
 
 
     Date mindcareLast = new Date();
-//    @Scheduled(cron = "*/5 * * * * *")
+    @Scheduled(cron = "*/5 * * * * *")
     public void mindcareMonitor() throws Throwable {
         log.debug("-==");
 
