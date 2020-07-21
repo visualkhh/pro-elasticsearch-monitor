@@ -128,13 +128,14 @@ public class Scheduler {
         });
 
 //        datas = datas.stream().filter(it->!it.getStacktrace().contains("java.io.IOException: Broken pipe")).collect(Collectors.toList());
-//        datas = datas.stream()
-//                .filter(it -> !"org.apache.catalina.connector.ClientAbortException".equals(it.getException_class()))
+        datas = datas.stream()
+                .filter(it -> !"/api/user".equals(it.getUrl_path()) && null!=it.getMsg() && !it.getMsg().contains("serialNo"))
+                .filter(it -> null!=it.getMsg() && !it.getMsg().contains("Could not parse 'Accept' header"))
 //                .filter(it-> !"org.springframework.security.access.AccessDeniedException".equals((it.getException_class())))
 //                .filter(it -> !"M2007".equals(it.getCode()))
 //                .filter(it -> !"M2006".equals(it.getCode()))
 //                .filter(it -> !"c.k.o.o.s.s.CustomAuthenticationProvider".equals(it.getJava_class()))
-//                .collect(Collectors.toList());
+                .collect(Collectors.toList());
 
         if (datas.size() > 0) {
             omnifit2Last = datas.get(0).getTimestamp();
@@ -302,6 +303,8 @@ public class Scheduler {
         datas = datas.stream()
                 .filter(it -> !"org.apache.catalina.connector.ClientAbortException".equals(it.getException_class()))
                 .filter(it-> !"org.springframework.security.access.AccessDeniedException".equals((it.getException_class())))
+                .filter(it-> null!=it.getMessage() && !it.getMessage().contains("java.lang.String cannot be cast to com.ko.omnicns.omnifit.login.vo.LoginVO"))
+                .filter(it-> !"M1001".equals(it.getCode()) && !"/api/AI201".equals(it.getUrl_path()))
 
                 //PW가 일치하지 않을 때
                 //존재하지 않는 아이디
