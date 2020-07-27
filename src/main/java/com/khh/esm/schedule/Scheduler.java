@@ -305,6 +305,7 @@ public class Scheduler {
                 .filter(it-> !"org.springframework.security.access.AccessDeniedException".equals((it.getException_class())))
                 .filter(it-> null!=it.getMessage() && !it.getMessage().contains("java.lang.String cannot be cast to com.ko.omnicns.omnifit.login.vo.LoginVO"))
                 .filter(it-> !"M1001".equals(it.getCode()) && !"/api/AI201".equals(it.getUrl_path()))
+                .filter(it-> !"M1013".equals(it.getCode()) && !"/api/AI025".equals(it.getUrl_path())) //개인화엡 validation 오류
 
                 //PW가 일치하지 않을 때
                 //존재하지 않는 아이디
