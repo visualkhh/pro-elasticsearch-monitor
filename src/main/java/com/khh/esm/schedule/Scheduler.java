@@ -80,7 +80,7 @@ public class Scheduler {
     Date omnifit2Last = new Date();
     @Scheduled(cron = "*/5 * * * * *")
     public void omnifit2Monitor() throws Throwable {
-        log.debug("-==");
+        log.info("omnifit2Monitor start");
         SearchRequest searchRequest = new SearchRequest("omnifit2");
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.from(0);
@@ -131,6 +131,7 @@ public class Scheduler {
         datas = datas.stream()
                 .filter(it -> !"/api/user".equals(it.getUrl_path()) && null!=it.getMsg() && !it.getMsg().contains("serialNo"))
                 .filter(it -> null!=it.getMsg() && !it.getMsg().contains("Could not parse 'Accept' header"))
+                .filter(it -> null!=it.getMsg() && !it.getMsg().contains("Could not find acceptable representation"))
 //                .filter(it-> !"org.springframework.security.access.AccessDeniedException".equals((it.getException_class())))
 //                .filter(it -> !"M2007".equals(it.getCode()))
 //                .filter(it -> !"M2006".equals(it.getCode()))
@@ -140,7 +141,7 @@ public class Scheduler {
         if (datas.size() > 0) {
             omnifit2Last = datas.get(0).getTimestamp();
         }
-        log.info("==========>{}", datas);
+        log.info("==========omnifit2Monitor size:{}", datas.size());
 
         if (datas.size() > 0) {
             helper.setTo(new String[]{"serviceteam@omnicns.com"});
@@ -217,7 +218,7 @@ public class Scheduler {
     Date mindcareLast = new Date();
     @Scheduled(cron = "*/5 * * * * *")
     public void mindcareMonitor() throws Throwable {
-        log.debug("-==");
+        log.info("mindcareMonitor start");
 
 
 //        BufferedImage capturedImage = ghostDriver.getScreenshotAsBufferedImage("http://119.206.205.181:5601/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-60m,to:now))&_a=(columns:!(_source),filters:!(),index:b73a3e60-a173-11ea-8461-dd4573115998,interval:auto,query:(language:kuery,query:''),sort:!())");
@@ -277,7 +278,7 @@ public class Scheduler {
             String id = hit.getId();
             float score = hit.getScore();
             String sourceAsString = hit.getSourceAsString();
-//            log.info("-->"+sourceAsString);
+//            log.debug("-->"+sourceAsString);
             MindCare care = objectMapper.readValue(sourceAsString, MindCare.class);
             care.set_id(id);
             care.set_index(hit.getIndex());
@@ -304,6 +305,7 @@ public class Scheduler {
                 .filter(it -> !"org.apache.catalina.connector.ClientAbortException".equals(it.getException_class()))
                 .filter(it-> !"org.springframework.security.access.AccessDeniedException".equals((it.getException_class())))
                 .filter(it-> null!=it.getMessage() && !it.getMessage().contains("java.lang.String cannot be cast to com.ko.omnicns.omnifit.login.vo.LoginVO"))
+                .filter(it-> null!=it.getMsg() && !it.getMsg().contains("bypass"))
                 .filter(it-> !"M1001".equals(it.getCode()) && !"/api/AI201".equals(it.getUrl_path()))
                 .filter(it-> !"M1013".equals(it.getCode()) && !"/api/AI025".equals(it.getUrl_path())) //개인화엡 validation 오류
 
@@ -318,7 +320,7 @@ public class Scheduler {
         if (datas.size() > 0) {
             mindcareLast = datas.get(0).getTimestamp();
         }
-        log.info("==========>{}", datas);
+        log.info("==========>mindcareMonitor size:{}", datas.size());
 
         if (datas.size() > 0) {
 //            SimpleMailMessage message = new SimpleMailMessage();
@@ -416,7 +418,7 @@ public class Scheduler {
 //                .bodyToMono(Search.class);
 //        // subscribe를 해줘야 스트리밍이 일어난다.
 //        hiMono.subscribe(hiResult -> {
-//            log.info("/hi API Result : " + hiResult);
+//            log.debug("/hi API Result : " + hiResult);
 //        });
     }
 
